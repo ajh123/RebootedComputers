@@ -9,6 +9,7 @@ import li.cil.sedna.device.rtc.SystemTimeRealTimeCounter;
 import li.cil.sedna.device.serial.UART16550A;
 import li.cil.sedna.device.virtio.VirtIOBlockDevice;
 import li.cil.sedna.riscv.R5Board;
+import me.ajh123.simulation_core.device.SerialConsole;
 
 import java.io.*;
 
@@ -19,8 +20,10 @@ public class VirtualMachine {
     private final GoldfishRTC rtc;
     private final VirtIOBlockDevice hdd;
     private final BootDisk images;
+    private final SerialConsole console;
 
-    public VirtualMachine(BootDisk bootDisk) throws IOException {
+    public VirtualMachine(BootDisk bootDisk, SerialConsole console) throws IOException {
+        this.console = console;
         this.board = new R5Board();
         this.images = bootDisk;
         memory = Memory.create(32 * 1024 * 1024);
@@ -55,42 +58,36 @@ public class VirtualMachine {
 
         final int cyclesPerSecond = board.getCpu().getFrequency();
         final int cyclesPerStep = 1_000;
+        int remaining = 0;
 
-        try (final InputStreamReader isr = new InputStreamReader(System.in)) {
-            final BufferedReader br = new BufferedReader(isr);
+        while (board.isRunning()) {
+            final long stepStart = System.currentTimeMillis();
 
-            int remaining = 0;
-            while (board.isRunning()) {
-                final long stepStart = System.currentTimeMillis();
+            remaining += cyclesPerSecond;
+            while (remaining > 0) {
+                board.step(cyclesPerStep);
+                remaining -= cyclesPerStep;
 
-                remaining += cyclesPerSecond;
-                while (remaining > 0) {
-                    board.step(cyclesPerStep);
-                    remaining -= cyclesPerStep;
-
-                    int value;
-                    while ((value = uart.read()) != -1) {
-                        System.out.print((char) value);
-                    }
-
-                    while (br.ready() && uart.canPutByte()) {
-                        uart.putByte((byte) br.read());
-                    }
+                int value;
+                while ((value = uart.read()) != -1) {
+                    console.write(value);
                 }
 
-                if (board.isRestarting()) {
-                    loadProgramFile(memory, images.firmware());
-                    loadProgramFile(memory, images.kernel(), 0x200000);
-
-                    board.initialize();
+                while (console.hasInput() && uart.canPutByte()) {
+                    uart.putByte((byte) console.read());
                 }
+            }
 
-                final long stepDuration = System.currentTimeMillis() - stepStart;
-                final long sleep = 1000 - stepDuration;
-                if (sleep > 0) {
-                    //noinspection BusyWait
-                    Thread.sleep(sleep);
-                }
+            if (board.isRestarting()) {
+                loadProgramFile(memory, images.firmware());
+                loadProgramFile(memory, images.kernel(), 0x200000);
+                board.initialize();
+            }
+
+            final long stepDuration = System.currentTimeMillis() - stepStart;
+            final long sleep = 1000 - stepDuration;
+            if (sleep > 0) {
+                Thread.sleep(sleep);
             }
         }
     }
