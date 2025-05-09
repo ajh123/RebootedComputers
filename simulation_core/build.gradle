@@ -1,0 +1,25 @@
+plugins {
+    id 'java'
+}
+
+group = 'me.ajh123'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+
+    implementation 'org.ow2.asm:asm-commons:9.2'
+    implementation 'org.ow2.asm:asm:9.1'
+    implementation 'li.cil.ceres:ceres:0.0.4'
+    implementation 'li.cil.sedna:sedna:2.0.7'
+    implementation 'li.cil.sedna:sedna-buildroot:0.0.8'
+}
+
+test {
+    useJUnitPlatform()
+}
