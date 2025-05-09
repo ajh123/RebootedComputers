@@ -1,0 +1,38 @@
+modLoader = "javafml"
+loaderVersion = "[2,)"
+#issueTrackerURL = ""
+license = "GNU GPL 3.0"
+
+[[mods]]
+modId = "rebooted_computers"
+version = "${version}"
+displayName = "RebootedComputers"
+authors = "ajh123"
+description = '''
+Rebooted Computers
+'''
+#logoFile = ""
+
+[[dependencies.rebooted_computers]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.rebooted_computers]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.rebooted_computers]]
+modId = "architectury"
+type = "required"
+versionRange = "[13.0.8,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[mixins]]
+config = "rebooted_computers.mixins.json"

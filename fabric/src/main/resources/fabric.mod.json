@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "rebooted_computers",
+  "version": "${version}",
+  "name": "RebootedComputers",
+  "description": "Rebooted Computers",
+  "authors": [
+    "ajh123"
+  ],
+  "contact": {
+    "homepage": "https://github.com/ajh123/RebootedComputers"
+  },
+  "license": "GPL-3.0",
+  "icon": "assets/rebooted_computers/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "me.ajh123.rebooted_computers.fabric.RebootedComputersFabric"
+    ],
+    "client": [
+      "me.ajh123.rebooted_computers.fabric.client.RebootedComputersFabricClient"
+    ]
+  },
+  "mixins": [
+    "rebooted_computers.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.14",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "architectury": ">=13.0.8",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "another-mod": "*"
+  }
+}
