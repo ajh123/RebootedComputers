@@ -12,5 +12,4 @@ rootProject.name = 'rebooted_computers'
 include 'common'
 include 'fabric'
 include 'neoforge'
-include 'simulation_core'
 

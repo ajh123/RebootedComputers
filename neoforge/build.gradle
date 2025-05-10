@@ -38,6 +38,12 @@ dependencies {
 
     common(project(path: ':common', configuration: 'namedElements')) { transitive false }
     shadowBundle project(path: ':common', configuration: 'transformProductionNeoForge')
+
+    forgeRuntimeLibrary 'org.ow2.asm:asm-commons:9.2'
+    forgeRuntimeLibrary 'org.ow2.asm:asm:9.1'
+    forgeRuntimeLibrary 'li.cil.ceres:ceres:0.0.4'
+    forgeRuntimeLibrary 'li.cil.sedna:sedna:2.0.7'
+    forgeRuntimeLibrary 'li.cil.sedna:sedna-buildroot:0.0.8'
 }
 
 processResources {
