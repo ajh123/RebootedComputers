@@ -1,5 +1,7 @@
 package me.ajh123.rebooted_computers.vm;
 
+import dev.architectury.networking.NetworkManager;
+import io.netty.buffer.Unpooled;
 import li.cil.sedna.api.Sizes;
 import li.cil.sedna.api.device.PhysicalMemory;
 import li.cil.sedna.device.block.ByteBufferBlockDevice;
@@ -9,9 +11,16 @@ import li.cil.sedna.device.rtc.SystemTimeRealTimeCounter;
 import li.cil.sedna.device.serial.UART16550A;
 import li.cil.sedna.device.virtio.VirtIOBlockDevice;
 import li.cil.sedna.riscv.R5Board;
-import me.ajh123.rebooted_computers.vm.device.SerialConsole;
+import me.ajh123.rebooted_computers.RebootedComputers;
+import me.ajh123.rebooted_computers.gui.screens.ComputerTerminalScreen;
+import me.ajh123.rebooted_computers.network.payloads.UpdateScreenStateS2CPayload;
+import me.ajh123.rebooted_computers.vm.terminal.Terminal;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class VirtualMachine {
     private final R5Board board;
@@ -20,10 +29,14 @@ public class VirtualMachine {
     private final GoldfishRTC rtc;
     private final VirtIOBlockDevice hdd;
     private final BootDisk bootDisk;
-    private final SerialConsole console;
+    private final Terminal terminal;
+    private final List<ServerPlayer> terminalUsers = new ArrayList<>();
+    private String id;
+    private long lastPacketSentTime = 0;
+    private static final long PACKET_SEND_INTERVAL_MS = 50; // send max 20 times/sec
 
-    public VirtualMachine(BootDisk bootDisk, SerialConsole console) throws IOException {
-        this.console = console;
+    public VirtualMachine(BootDisk bootDisk) throws IOException {
+        this.terminal = new Terminal();
         this.board = new R5Board();
         this.bootDisk = bootDisk;
         memory = Memory.create(32 * 1024 * 1024);
@@ -34,6 +47,37 @@ public class VirtualMachine {
                     ByteBufferBlockDevice.createFromStream(this.bootDisk.rootfs(), true));
         } else {
             hdd = null;
+        }
+    }
+
+    public void addTerminalUser(ServerPlayer player) {
+        terminalUsers.add(player);
+    }
+
+    public void removeTerminalUser(ServerPlayer player) {
+        terminalUsers.remove(player);
+    }
+
+    private void sendUpdatePacket() {
+        for (ServerPlayer player : terminalUsers) {
+            ComputerTerminalScreen.ComputerTerminalScreenState state = new ComputerTerminalScreen.ComputerTerminalScreenState(
+                    RebootedComputers.VM_MANAGER.isRunning(this.getId()),
+                    this.terminal.getOutput()
+            );
+
+            FriendlyByteBuf payload = new FriendlyByteBuf(Unpooled.buffer());
+            ComputerTerminalScreen.STREAM_CODEC.encode(payload, state);
+            byte[] bytes = new byte[payload.readableBytes()];
+            payload.readBytes(bytes);
+            NetworkManager.sendToPlayer(player, new UpdateScreenStateS2CPayload(bytes));
+        }
+    }
+
+    private void maybeSendUpdatePacket() {
+        long now = System.currentTimeMillis();
+        if (now - lastPacketSentTime >= PACKET_SEND_INTERVAL_MS) {
+            sendUpdatePacket();
+            lastPacketSentTime = now;
         }
     }
 
@@ -75,12 +119,14 @@ public class VirtualMachine {
 
                 int value;
                 while ((value = uart.read()) != -1) {
-                    console.write(value);
+                    terminal.putOutput((byte) value);
                 }
 
-                while (console.hasInput() && uart.canPutByte()) {
-                    uart.putByte((byte) console.read());
+                while (!terminal.input.isEmpty() && uart.canPutByte()) {
+                    uart.putByte(terminal.input.dequeueByte());
                 }
+
+                maybeSendUpdatePacket();
             }
 
             if (board.isRestarting() && !Thread.currentThread().isInterrupted()) {
@@ -114,7 +160,15 @@ public class VirtualMachine {
         }
     }
 
-    public boolean isRunning() {
-        return board.isRunning();
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public Terminal getTerminal() {
+        return terminal;
     }
 }

@@ -458,6 +458,21 @@ public class Terminal {
         }
     }
 
+    public synchronized ByteBuffer getOutput() {
+        int[] output = buffer;
+        if (currentPrivateModeState.isAltBufferEnabled()) {
+            output = altBuffer;
+        }
+        int startIndex = (lastRowToDisplayMax - HEIGHT) * WIDTH;
+        int endIndex = startIndex + (HEIGHT * WIDTH);
+        ByteBuffer byteBuffer = ByteBuffer.allocate(endIndex - startIndex);
+        for (int i = startIndex; i < endIndex; i++) {
+            byteBuffer.put((byte) output[i]);
+        }
+        byteBuffer.flip();
+        return byteBuffer;
+    }
+
     public synchronized void putOutput(final byte value) {
         synchronized (buffer) {
             synchronized (altBuffer) {

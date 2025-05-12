@@ -41,7 +41,6 @@ package me.ajh123.rebooted_computers.gui.terminal;
 import com.mojang.blaze3d.vertex.*;
 import me.ajh123.rebooted_computers.gui.Sprites;
 import me.ajh123.rebooted_computers.gui.screens.ComputerTerminalScreen;
-import me.ajh123.rebooted_computers.vm.VirtualMachine;
 import me.ajh123.rebooted_computers.vm.terminal.Terminal;
 import me.ajh123.rebooted_computers.vm.terminal.modes.MouseMode;
 import me.ajh123.rebooted_computers.vm.terminal.modes.PrivateMode;
@@ -76,7 +75,6 @@ public final class MachineTerminalWidget {
 
     private final ComputerTerminalScreen parent;
     private final Terminal terminal;
-    private final VirtualMachine virtualMachine;
     private int leftPos, topPos;
     private boolean isMouseOverTerminal;
     private Terminal.RendererView rendererView;
@@ -84,10 +82,9 @@ public final class MachineTerminalWidget {
 
     ///////////////////////////////////////////////////////////////////
 
-    public MachineTerminalWidget(final ComputerTerminalScreen parent, final Terminal terminal, final VirtualMachine virtualMachine) {
+    public MachineTerminalWidget(final ComputerTerminalScreen parent, final Terminal terminal) {
         this.parent = parent;
         this.terminal = terminal;
-        this.virtualMachine = virtualMachine;
     }
 
     public void renderBackground(final GuiGraphics graphics, final int mouseX, final int mouseY) {
@@ -101,7 +98,7 @@ public final class MachineTerminalWidget {
     }
 
     public void render(final GuiGraphics graphics, @Nullable final Component error) {
-        if (virtualMachine.isRunning()) {
+        if (parent.getState().isVmRunning()) {
             final PoseStack terminalStack = new PoseStack();
             terminalStack.translate(leftPos + TERMINAL_X, topPos + TERMINAL_Y, 0);
             terminalStack.scale(TERMINAL_WIDTH / (float) terminal.getWidth(), TERMINAL_HEIGHT / (float) terminal.getHeight(), 1f);
@@ -337,7 +334,7 @@ public final class MachineTerminalWidget {
 
     private boolean shouldCaptureInput() {
         return isMouseOverTerminal && parent.shouldCaptureInput() &&
-                virtualMachine.isRunning();
+                parent.getState().isVmRunning();
     }
 
     private boolean isMouseOverTerminal(final int mouseX, final int mouseY) {

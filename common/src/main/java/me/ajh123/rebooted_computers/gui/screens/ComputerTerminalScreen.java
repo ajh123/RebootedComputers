@@ -41,33 +41,47 @@ package me.ajh123.rebooted_computers.gui.screens;
 import com.mojang.blaze3d.platform.InputConstants;
 import me.ajh123.rebooted_computers.gui.Sprites;
 import me.ajh123.rebooted_computers.gui.terminal.MachineTerminalWidget;
-import me.ajh123.rebooted_computers.vm.DummyVirtualMachine;
+import me.ajh123.rebooted_computers.network.ModPackets;
 import me.ajh123.rebooted_computers.vm.terminal.Terminal;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.StreamCodec;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class ComputerTerminalScreen extends AbstractScreen {
+public class ComputerTerminalScreen extends AbstractScreen<ComputerTerminalScreen.ComputerTerminalScreenState> {
     private static final int CONTROLS_TOP = 8;
     private static final int ENERGY_TOP = CONTROLS_TOP + Sprites.SIDEBAR_3.height + 4;
+    public static final StreamCodec<FriendlyByteBuf, ComputerTerminalScreenState> STREAM_CODEC = StreamCodec.of(
+            (buf, state) -> {
+                buf.writeInt(state.isVmRunning ? 1 : 0);
+                ModPackets.writeByteBuffer(buf, state.terminalOutput);
+            },
+            buf -> {
+                int isVmRunning = buf.readInt();
+                boolean vmRunning = isVmRunning == 1;
+                ByteBuffer terminalOutput = ModPackets.readByteBuffer(buf);
+                terminalOutput.flip();
+                return new ComputerTerminalScreenState(vmRunning, terminalOutput);
+            }
+    );
 
+    private ComputerTerminalScreenState state;
     private boolean mouseClicked;
 
+    private final String vmID;
     private final Terminal terminal;
     private final MachineTerminalWidget terminalWidget;
     private boolean shouldCaptureInput = false;
 
-    public ComputerTerminalScreen() {
+    public ComputerTerminalScreen(String vmID) {
         super(Component.literal(""));
+        this.vmID = vmID;
         this.terminal = new Terminal();
-        try {
-            this.terminalWidget = new MachineTerminalWidget(this, terminal, new DummyVirtualMachine(null, null));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        this.terminalWidget = new MachineTerminalWidget(this, terminal);
+        this.state = new ComputerTerminalScreenState(false, null);
     }
 
     @Override
@@ -134,7 +148,7 @@ public class ComputerTerminalScreen extends AbstractScreen {
 
     @Override
     protected void renderFg(GuiGraphics graphics, float partialTicks, int mouseX, int mouseY) {
-        super.renderFg(graphics, partialTicks, mouseX, mouseY);
+        terminal.clientTick();
         terminalWidget.tick();
 
         int leftPos = getRectangle().left();
@@ -183,4 +197,24 @@ public class ComputerTerminalScreen extends AbstractScreen {
     private boolean shouldRenderEnergyBar() {
         return true;
     }
+
+    public ComputerTerminalScreenState getState() {
+        return state;
+    }
+
+    @Override
+    public StreamCodec<FriendlyByteBuf, ComputerTerminalScreenState> getStateCodec() {
+        return STREAM_CODEC;
+    }
+
+    @Override
+    public void read(ComputerTerminalScreenState state) {
+        this.state = state;
+        this.terminal.putOutput(state.terminalOutput);
+    }
+
+    public record ComputerTerminalScreenState(
+            boolean isVmRunning,
+            ByteBuffer terminalOutput
+    ) {}
 }

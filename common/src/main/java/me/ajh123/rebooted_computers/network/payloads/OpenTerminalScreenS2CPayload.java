@@ -31,7 +31,7 @@ public record OpenTerminalScreenS2CPayload(String vmID) implements CustomPacketP
 
     public static void receive(OpenTerminalScreenS2CPayload t, NetworkManager.PacketContext packetContext) {
         if (packetContext.getEnvironment() == Env.CLIENT) {
-            Minecraft.getInstance().setScreen(new ComputerTerminalScreen());
+            Minecraft.getInstance().setScreen(new ComputerTerminalScreen(t.vmID()));
         }
     }
 }

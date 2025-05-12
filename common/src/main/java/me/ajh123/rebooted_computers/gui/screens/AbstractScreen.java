@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
-public class AbstractScreen extends Screen {
+public abstract class AbstractScreen<S> extends Screen implements SynchronisedScreen<S> {
     protected AbstractScreen(Component title) {
         super(title);
     }
@@ -33,6 +33,5 @@ public class AbstractScreen extends Screen {
         renderFg(graphics, partialTicks, mouseX, mouseY);
     }
 
-    protected void renderFg(final GuiGraphics graphics, final float partialTicks, final int mouseX, final int mouseY) {
-    }
+    protected abstract void renderFg(final GuiGraphics graphics, final float partialTicks, final int mouseX, final int mouseY);
 }
